@@ -355,13 +355,7 @@
             img[alt="[公式]"] {filter: none !important;}`,
             style_31_firefox = `html {filter: invert(${style_30[0]}%) !important; background-image: url(); text-shadow: 0 0 0 !important;}
             ${menu_value('menu_customMode3_exclude')} {filter: invert(1) !important;}
-            img[alt="[公式]"] {filter: none !important;}`,
-            style_31_scrollbar = `::-webkit-scrollbar {height: 12px !important;}
-::-webkit-scrollbar-thumb {border-radius: 0;border-color: transparent;border-style: dashed;background-color: #3f4752 !important;background-clip: padding-box;transition: background-color .32s ease-in-out;}
-::-webkit-scrollbar-corner {background: #202020 !important;}
-::-webkit-scrollbar-track {background-color: #22272e !important;}
-::-webkit-scrollbar-thumb:hover {background: #3f4752 !important;}`;
-
+            img[alt="[公式]"] {filter: none !important;}`;
 
         // Firefox 浏览器需要特殊对待
         if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
@@ -393,7 +387,7 @@
                 style += style_22;
                 break;
             case 3:
-                style += style_31 + style_31_scrollbar;
+                style += style_31;
                 if (location.hostname.indexOf('search.bilibili.com') > -1) {
                     style += `ul.video-list img, ul.video-list .video-item .img .mask-video, ul.video-list .video-item .img .van-danmu, ul.video-list .video-item .img .van-framepreview {filter: none !important;}`
                 } else if (location.hostname.indexOf('.bilibili.com') > -1) {
@@ -432,6 +426,8 @@
                 clearInterval(timer); // 取消定时器（每 5 毫秒一次的）
                 setTimeout(function () { // 为了避免太快 body 的 CSS 还没加载上，先延迟 150 毫秒（缺点就是可能会出现短暂一闪而过的暗黑滤镜）
                     console.log('[护眼模式] html:', window.getComputedStyle(document.lastElementChild).backgroundColor, 'body:', window.getComputedStyle(document.body).backgroundColor)
+                    setDarkScrollbarColor();
+                    setDarkBackgroundColor();
                     if (window.getComputedStyle(document.body).backgroundColor === 'rgba(0, 0, 0, 0)' && window.getComputedStyle(document.lastElementChild).backgroundColor === 'rgba(0, 0, 0, 0)' && !(document.querySelector('head>meta[name="color-scheme"],head>link[href^="resource:"]') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                         // 如果 body 没有 CSS 背景颜色（或是在资源页 且 浏览器为白天模式），那就需要添加一个背景颜色，否则影响滤镜效果
                         let style_Add2 = document.createElement('style');
@@ -454,6 +450,8 @@
                 // 用来解决一些 CSS 加载缓慢的网站，可能会出现没有正确排除的问题，在没有找到更好的办法之前，先这样凑活着用
                 setTimeout(function () {
                     console.log('[护眼模式] html:', window.getComputedStyle(document.lastElementChild).backgroundColor, 'body:', window.getComputedStyle(document.body).backgroundColor)
+                    setDarkScrollbarColor();
+                    setDarkBackgroundColor();
                     if ((document.querySelector('head>meta[name="color-scheme"],head>link[href^="resource:"]') && window.matchMedia('(prefers-color-scheme: dark)').matches) || (document.querySelector('html[class*=dark], html[data-dark-theme*=dark], html[data-theme*=dark], html[data-color-mode*=dark], body[class*=dark]')) || (window.getComputedStyle(document.body).backgroundColor === 'rgb(0, 0, 0)') || (getColorValue(document.body) > 0 && getColorValue(document.body) < 898989) || (getColorValue(document.lastElementChild) > 0 && getColorValue(document.lastElementChild) < 898989) || (window.getComputedStyle(document.body).backgroundColor === 'rgba(0, 0, 0, 0)' && window.getComputedStyle(document.lastElementChild).backgroundColor === 'rgb(0, 0, 0)')) {
                         // 如果是在资源页 且 浏览器为暗黑模式，或 html/body 元素包含 dark 标识，或底色为黑色 (等于0,0,0) 或深色 (小于 89,89,89)，就停用本脚本滤镜
                         if (menu_value('menu_autoRecognition')) { // 排除自带暗黑模式的网页 (beta)
@@ -485,6 +483,45 @@
     function getColorValue(e) {
         let rgbValueArry = window.getComputedStyle(e).backgroundColor.replace(/rgba|rgb|\(|\)| /g, '').split(',')
         return parseInt(rgbValueArry[0] + rgbValueArry[1] + rgbValueArry[2])
+    }
+
+
+    // 获取背景颜色数组
+    function getColorArray(e) {
+        let rgbValueArry = window.getComputedStyle(e).backgroundColor.replace(/rgba|rgb|\(|\)| /g, '').split(',')
+        return rgbValueArry.map((item) => parseInt(item))
+    }
+
+
+    // 手动实现反色滤镜
+    function applyInvert(rgb, factor) {
+        return rgb.map(value => Math.round(value * (1 - factor) + (255 - value) * factor))
+    }
+
+
+    // 模式3设置暗色的滚动条，需要等待读取背景色
+    function setDarkScrollbarColor() {
+        let darkModeType = getAutoSwitch()
+        if (darkModeType == 3) {
+            let style_30 = menu_value('menu_customMode3').split('|')
+            let color = getColorArray(document.body)
+            color = applyInvert(color, style_30[0] * 0.01)
+            document.getElementById('XIU2DarkMode').textContent += ` html {scrollbar-color: #909090d0 rgb(${color.join(" ")});}`
+            document.getElementById('XIU2DarkMode').textContent += ` body {scrollbar-color: auto;}`
+        }
+    }
+
+
+    // 模式3设置暗色的背景页，需要等待读取背景色
+    function setDarkBackgroundColor() {
+        let darkModeType = getAutoSwitch()
+        if (darkModeType == 3) {
+            let style_30 = menu_value('menu_customMode3').split('|')
+            let color = getColorArray(document.body)
+            //color = applyInvert(color, style_30[0] * 0.01)
+            //document.getElementById('XIU2DarkMode').textContent += ` html {background-color: rgb(${color.join(" ")});}`
+            document.getElementById('XIU2DarkMode').textContent += ` html::before {content:"";position:fixed;top:0;left:0;width:100vw;height:100vh;background-color:rgb(${color.join(" ")});z-index:-999;}`
+        }
     }
 
 
